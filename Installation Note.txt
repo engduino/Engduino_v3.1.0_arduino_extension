@@ -1,0 +1,25 @@
+To use Engduino, 
+
+1. You should download an Arduino installation from http://arduino.cc/en/Main/Software. We recommend Arduino 1.0.6+
+
+2. Checkout "Hardware" folder, copy the directory "Engduino" in
+
+> Windows: (Arduino IDE directory)/hardware
+> MAC: 
+> Linux
+
+3. (Optional) If you would like to use and run our Engduino examples, checkout "Example" folder, copy "100.Engduino" in 
+
+> Windows: (Arduino IDE directory)/examples
+> MAC:
+> Linux: 
+
+================================================================================================
+Engduino driver
+Engduino use the same driver as Lilypad USB, which comes with Arduino distribution and can be found under 
+
+> Windows: (Arduino IDE directory)/drivers
+
+
+
+
