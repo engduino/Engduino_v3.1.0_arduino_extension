@@ -1,6 +1,14 @@
 # Ignore everything:
-
+*
 
 # Except for the Engduino related directories:
+!examples/
+!examples/*
 !examples/100.Engduino/
-!examples/100.Engduino/*
+!examples/100.Engduino/**
+
+!hardware/
+!hardware/*
+!hardware/Engduino/
+!hardware/Engduino/**
+    
