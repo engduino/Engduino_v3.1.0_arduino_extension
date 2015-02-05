@@ -1,0 +1,6 @@
+# Ignore everything:
+
+
+# Except for the Engduino related directories:
+!examples/100.Engduino/
+!examples/100.Engduino/*
