@@ -15,7 +15,7 @@
 */
 
 #include "pins_arduino.h"
-#include "../Wire/Wire.h"
+#include <Wire.h>
 #include "EngduinoMagnetometer.h"
 
 #if defined (__BOARD_ENGDUINOV2) || defined(__BOARD_ENGDUINOV3)
