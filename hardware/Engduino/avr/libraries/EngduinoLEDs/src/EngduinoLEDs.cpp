@@ -29,7 +29,7 @@
 
 #include "pins_arduino.h"
 #ifdef __BOARD_ENGDUINOV3
-	#include "SPI.h"
+	#include <SPI.h>
 #endif
 #include "EngduinoLEDs.h"
 

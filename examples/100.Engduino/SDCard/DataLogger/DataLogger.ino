@@ -3,6 +3,7 @@
 #include <EngduinoLEDs.h>
 #include <EngduinoButton.h>
 
+//#include <SPI.h>  //Comment this line if you already have include #include <EngduinoLEDs.h>
 // Data logger
 //
 // In this sketch, temperature value is saved on the SD Card every
