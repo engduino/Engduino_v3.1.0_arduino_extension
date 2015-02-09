@@ -140,7 +140,7 @@ float EngduinoThermistorClass::temperature(temperatureUnits units, float B, floa
 */
 uint16_t EngduinoThermistorClass::temperatureRaw()
 {
-	return(analogRead(A5));
+	return(analogRead(NTC));
 }
 
 
