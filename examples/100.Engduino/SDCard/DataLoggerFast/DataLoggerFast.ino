@@ -2,6 +2,7 @@
 #include <EngduinoThermistor.h>
 #include <EngduinoButton.h>
 
+#include <SPI.h>  //Comment this line if you already have include #include <EngduinoLEDs.h>
 // Data logger fast
 //
 // In this sketch, temperature values is saved locally and on 

@@ -46,7 +46,7 @@
 #define LED_LATCH_BIT	PORTD6
 
 // NTC
-#define NTC  		 0
+#define NTC  		 5
 
 // IR transsceiver
 #define IR_SD  		 4

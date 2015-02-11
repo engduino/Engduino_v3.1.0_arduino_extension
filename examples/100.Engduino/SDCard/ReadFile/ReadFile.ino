@@ -1,6 +1,7 @@
 #include <EngduinoSD.h>
 #include <EngduinoButton.h>
 
+#include <SPI.h>  //Comment this line if you already have include #include <EngduinoLEDs.h>
 // Read content in file from SD Card
 //
 // In this sketch, content of the file stored on SD Card 
