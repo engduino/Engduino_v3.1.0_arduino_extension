@@ -1015,8 +1015,8 @@ void EngduinoProtocolClass::mainLoop()
 		    else
 		    {
 			for(byte j = 0; j < 3; j++) {
-				vals[j] = sensorsSum[SENSOR_ACC_X_BUF + j] / sensorsSamples[SENSOR_ACC];
-				sensorsSum[SENSOR_ACC_X_BUF + j] = 0;
+			    vals[j] = sensorsSum[SENSOR_ACC_X_BUF + j] / sensorsSamples[SENSOR_ACC];
+			    sensorsSum[SENSOR_ACC_X_BUF + j] = 0;
 			}
 			vals[3] = sensorsSamples[SENSOR_ACC];
 			sensorsSamples[SENSOR_ACC] = 0;
@@ -1034,8 +1034,8 @@ void EngduinoProtocolClass::mainLoop()
 		    else
 		    {
 			for(byte j = 0; j < 3; j++) {
-				vals[j] = sensorsSum[SENSOR_MAG_X_BUF + j] / sensorsSamples[SENSOR_MAG];
-				sensorsSum[SENSOR_MAG_X_BUF + j] = 0;
+			    vals[j] = sensorsSum[SENSOR_MAG_X_BUF + j] / sensorsSamples[SENSOR_MAG];
+			    sensorsSum[SENSOR_MAG_X_BUF + j] = 0;
 			}
 			vals[3] = sensorsSamples[SENSOR_MAG];
 			sensorsSamples[SENSOR_MAG] = 0;
@@ -1070,17 +1070,16 @@ void EngduinoProtocolClass::mainLoop()
 		    else
 		    {
 			for(byte j = 0; j < NR_SENSORS_BUF; j++) {
-				vals[j] = sensorsSum[j] / sensorsSamples[SENSOR_ALL];
-				sensorsSum[j] = 0;
+			    vals[j] = sensorsSum[j] / sensorsSamples[SENSOR_ALL];
+			    sensorsSum[j] = 0;
 			}
 			vals[8] = sensorsSamples[SENSOR_ALL];
 			sensorsSamples[SENSOR_ALL] = 0;
 		    }
 		    EngduinoProtocol.sendPackage(9, COM_GET_SENSORS, vals);
 		    break;
-		}
-		sensorsReadOnce[i] = 0;
 	    }
+	    sensorsReadOnce[i] = 0;
 	}
     }
 
