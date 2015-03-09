@@ -524,7 +524,7 @@ int EngduinoProtocolClass::setLEDs(struct EngduinoPackage *engPackage, byte inNr
     else if(inNrVals == 3)		
     {
 	// Set RGB colour of all LEDs.
-	engduinoLEDs->setLED((uint8_t)inVals[0], (colour)inVals[1], (uint8_t)inVals[2]);
+	engduinoLEDs->setAll((uint8_t)inVals[0], (uint8_t)inVals[1], (uint8_t)inVals[2]);
 	return RES_OK;
     }
     else if(inNrVals == 4)		
