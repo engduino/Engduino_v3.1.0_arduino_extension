@@ -13,7 +13,7 @@ EngduinoProtocol	KEYWORD1
 #######################################
 
 begin	KEYWORD2
-end	KEYWORD2
+end KEYWORD2
 mainLoop	KEYWORD2
 loadDefaults	KEYWORD2
 parsePackage	KEYWORD2
@@ -24,9 +24,12 @@ setLED	KEYWORD2
 setLEDs	KEYWORD2
 setGetStatus	KEYWORD2
 setGetIR	KEYWORD2
+setPinsType	KEYWORD2
+setPinsValue	KEYWORD2
 getVersion	KEYWORD2
 getSensor	KEYWORD2
 getButton	KEYWORD2
+getPinsValue	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

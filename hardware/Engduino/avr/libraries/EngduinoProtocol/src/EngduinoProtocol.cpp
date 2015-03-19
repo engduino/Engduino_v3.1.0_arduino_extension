@@ -199,6 +199,13 @@ void EngduinoProtocolClass::loadDefaults()
 	irBuf[i] = 0;
     }
 
+    //Initialize digital pins transition buffer
+    for (byte i = 0; i < NR_TRAN_PINS; i++) {
+	pinTranOption[i] = PIN_TRAN_NONE;
+	pinOldState[i] = 0;
+    }
+    
+
     cntt = 0;
 }
 
@@ -702,13 +709,124 @@ int EngduinoProtocolClass::setGetStatus(struct EngduinoPackage *engPackage, byte
 		// Number of samples per second.
 		case STATUS_OVERSAMPLING: 
 		    vals[(i*2)+0] = (long)STATUS_OVERSAMPLING;	// Key
-		    vals[(i*2)+1] = (long)overSampling;			// Value
+		    vals[(i*2)+1] = (long)overSampling;		// Value
 		    break;
 		default:
 		    return RES_ERR_PACKAGE_UNKNOWN_STATUS_KEY;
 	    }
 	}
 	sendPackage(engPackage, nrOf*2, COM_GET_STATUS, vals);
+    }
+    return RES_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+* \brief Set digital or analog pin type.
+* \param engPackage	Pointer to an Engduino package structure
+* \param inNrVals	Number of input values
+* \param inVals		Array of input values
+* \param digAnalog	Digital or Analog flag
+* \return		On success RES_OK, otherwise error code represents
+*			particular error.
+*
+* This function will set pins type. Parameters needs to be specified in 
+* KEY-VALUE pairs. Multiple pairs can be included in the same package.
+*
+* Pin Type:
+* <table><tr><th>Value</th><th>Type</th></tr>
+* <tr><td>[0]</td><td>INPUT</td></tr>
+* <tr><td>[1]</td><td>OUTPUT</td></tr></table>
+*
+* Input value examples: (digAnalog = 0)
+* \n [1,0, 10,0, 12,1, ...] -> Set D1 and D10 as INPUT and D12 as output
+*
+* Input value examples: (digAnalog = 1)
+* \n [3,0, 5,1, ...] -> Set A3 as INPUT and A5 as output
+*
+*/
+int EngduinoProtocolClass::setPinsType(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog)
+{
+    int nrOf, pinn;
+    // Number of input parameters must be even.
+    if (inNrVals % 2) return RES_ERR_PACKAGE_NR_VALS;
+    nrOf = inNrVals / 2;
+    for (int i = 0; i < nrOf; i++)
+    {
+	if(digAnalog == 0)
+	{
+	    // Digital
+	    pinMode(inVals[(i * 2) + 0], inVals[(i * 2) + 1]);
+	}
+	else
+	{
+	    // Analog
+	    switch (inVals[(i * 2) + 0])
+	    {
+		case 0: pinn = A0; break;
+		case 1: pinn = A1; break;
+		case 2: pinn = A2; break;
+		case 3: pinn = A3; break;
+		case 4: pinn = A4; break;
+		case 5: pinn = A5; break;
+		case 6: pinn = A6; break;
+		case 7: pinn = A7; break;
+		case 8: pinn = A8; break;
+		default:
+		return RES_ERR_PACKAGE_UNKNOWN_ANALOG_PIN;
+	    }
+	    pinMode(pinn, inVals[(i * 2) + 1]);
+	}
+    }
+    return RES_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+* \brief Set digital or analog pin value.
+* \param engPackage	Pointer to an Engduino package structure
+* \param inNrVals	Number of input values
+* \param inVals		Array of input values
+* \param digAnalog	Digital or Analog flag
+* \return		On success RES_OK, otherwise error code represents
+*			particular error.
+*
+* This function will set pins value. Parameters needs to be specified in
+* KEY-VALUE pairs. Multiple pairs can be included in the same package. Be
+* carful that pin is already initialized as output!
+*
+* Pin value:
+* <table><tr><th>Value</th><th>Type</th></tr>
+* <tr><td>[0]</td><td>LOW</td></tr>
+* <tr><td>[1]</td><td>HIGH</td></tr>
+* <tr><td>[0-255]</td><td>PWM duty cycle</td></tr></table>
+*
+* Input value examples: (digAnalog = 0)
+* \n [1,0, 4,0, 12,1, ...] -> Reset D1 and D4 and set D12 on HIGH state.
+*
+* Input value examples: (digAnalog = 1)
+* \n [5,96, 13,239, ...] -> Set D5# and D13# as a PWM outputs. Value 
+* represents the duty cycle: between 0 (always off) and 255 (always on). 
+*
+*/
+int EngduinoProtocolClass::setPinsValue(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog)
+{
+    int nrOf, pinn;
+    // Number of input parameters must be even.
+    if (inNrVals % 2) return RES_ERR_PACKAGE_NR_VALS;
+    nrOf = inNrVals / 2;
+    for (int i = 0; i < nrOf; i++)
+    {
+	if (digAnalog == 0)
+	{
+	    // Digital
+	    digitalWrite(inVals[(i * 2) + 0], inVals[(i * 2) + 1]);
+	}
+	else
+	{
+	    // Analog
+	    analogWrite(inVals[(i * 2) + 0], inVals[(i * 2) + 1]);
+	}
     }
     return RES_OK;
 }
@@ -784,7 +902,7 @@ int EngduinoProtocolClass::getSensor(struct EngduinoPackage *engPackage, int sen
 
 /*---------------------------------------------------------------------------*/
 /**
-* \brief Get Engduino's sensor measurements
+* \brief Get Engduino's button state
 * \param engPackage	Pointer to an Engduino package structure
 * \param inNrVals	Number of input values
 * \param inVals		Array of input values
@@ -792,17 +910,16 @@ int EngduinoProtocolClass::getSensor(struct EngduinoPackage *engPackage, int sen
 *			particular error.
 *
 * This function will send button state or enables button interrupt, which
-* will immediately sens back any change in button state. Both edges can be
-* configured as an interrupt source.
+* will immediately send back any change in button state. Both edges can be
+* configured as an interrupt source. 
 *
-* Input value examples:
+* Input value table:
 * <table><tr><th>Input val.</th><th>Action</th></tr>
 * <tr><td>[0]</td><td>Read once</td></tr>
 * <tr><td>[-1]</td><td>Disable button interrupt</td></tr>
 * <tr><td>[1]</td><td>Send package on button press</td></tr>
 * <tr><td>[2]</td><td>Send package on button release</td></tr>
-* <tr><td>[3]</td><td>Send package on change of both button states</td></tr></table> 
-*
+* <tr><td>[3]</td><td>Send package on change of both button states</td></tr></table>
 */
 int EngduinoProtocolClass::getButton(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals)
 {
@@ -834,6 +951,82 @@ int EngduinoProtocolClass::getButton(struct EngduinoPackage *engPackage, byte in
     // Read once.
     (engduinoButton->isPressed()) ? vals[0] = 1 : vals[0] = 0;
     sendPackage(engPackage, 1, COM_GET_BUTTON, vals);
+    return RES_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+* \brief Get digital or analog pin value
+* \param engPackage	Pointer to an Engduino package structure
+* \param inNrVals	Number of input values
+* \param inVals		Array of input values
+* \param digAnalog	Digital or Analog flag
+* \return		On success RES_OK, otherwise error code represents
+*			particular error.
+*
+* This function will send pin state or enables pin on-transition interrupt,
+* which will immediately send back any change of pin's transition. Both edges
+* can be configured as an interrupt source. Parameters needs to be specified in
+* KEY-VALUE pairs. Multiple pairs can be included in the same package.
+*
+* Input value table:
+* <table><tr><th>Input val.</th><th>Action</th></tr>
+* <tr><td>[0]</td><td>Read once</td></tr>
+* <tr><td>[-1]</td><td>Disable pin interrupt</td></tr>
+* <tr><td>[1]</td><td>Send package on low to high transition</td></tr>
+* <tr><td>[2]</td><td>Send package on high to low transition</td></tr>
+* <tr><td>[3]</td><td>Send package on both transitions</td></tr></table>
+*
+*
+* Input value examples: (digAnalog = 0)
+* \n [1,0, 4,0, 6,0, ...] -> Will return KEY-VALUE pairs of digital pins D1, D4 and D6. 
+* E.g.: [1,0, 4,1, 6,0]
+* Value 1 donates to HIGH state, value 0 to LOW state.
+*
+* Input value examples: (digAnalog = 1)
+* \n [1,0, 3,0, 5,0, ...] -> Will return KEY-VALUE pairs of analog pins A1, A3 and A5.
+* E.g.: [1,123, 3,1022, 5,862]
+* Values represents pin's AD value in range [0 - 1023]. The value 1023 donates to 3.3V
+*
+* Input value examples: (digAnalog = 0)
+* \n [6,1, 10,2, 12,3, ...] -> Will enables transition interrupts on pins D6, D10 and D12.
+*
+* Transition mode:
+* <table><tr><th>Input val.</th><th>Action</th></tr>
+* <tr><td>[1]</td><td>PIN_TRAN_LOW_TO_HIGH</td></tr>
+* <tr><td>[2]</td><td>PIN_TRAN_HIGH_TO_LOW</td></tr>
+* <tr><td>[3]</td><td>PIN_TRAN_BOTH</td></tr>
+*
+*/
+int EngduinoProtocolClass::getPinsValue(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog)
+{
+    int nrOf;
+    // Number of input parameters must be even.
+    if (inNrVals % 2) return RES_ERR_PACKAGE_NR_VALS;
+    nrOf = inNrVals / 2;
+    for (int i = 0; i < nrOf; i++)
+    {
+	vals[(i * 2) + 0] = inVals[(i * 2) + 0];
+	if (digAnalog == 0)
+	{
+	    // Digital
+	    vals[(i * 2) + 1] = (long)digitalRead(inVals[(i * 2) + 0]);
+	    if ((inVals[(i * 2) + 1] != 0) && (inVals[(i * 2) + 0] < NR_TRAN_PINS)) {
+		pinTranOption[inVals[(i * 2) + 0]] = inVals[(i * 2) + 1];
+		pinOldState[(i * 2) + 0] = (byte)vals[(i * 2) + 1];
+	    }
+	}
+	else
+	{
+	    // Analog
+	    vals[(i * 2) + 1] = (long)analogRead(inVals[(i * 2) + 0]);
+	}
+    }
+
+    byte commId;
+    (digAnalog == 0) ? commId = COM_GET_PINS_DIGITAL_VALUE : commId = COM_GET_PINS_ANALOG_VALUE;
+
+    sendPackage(engPackage, nrOf*2, commId, vals);
     return RES_OK;
 }
 
@@ -1007,14 +1200,14 @@ void EngduinoProtocolClass::mainLoop()
 
 		case SENSOR_ACC:
 		    PRINTLN("SENSOR_ACC");
-		    if(overSampling == 0 || sensorsSamples[SENSOR_ACC] == 0)
+		    if (overSampling == 0 || sensorsSamples[SENSOR_ACC] == 0)
 		    {
 			_readAccelerometer(vals);
 			vals[3] = 1;
 		    }
 		    else
 		    {
-			for(byte j = 0; j < 3; j++) {
+			for (byte j = 0; j < 3; j++) {
 			    vals[j] = sensorsSum[SENSOR_ACC_X_BUF + j] / sensorsSamples[SENSOR_ACC];
 			    sensorsSum[SENSOR_ACC_X_BUF + j] = 0;
 			}
@@ -1026,14 +1219,14 @@ void EngduinoProtocolClass::mainLoop()
 
 		case SENSOR_MAG:
 		    PRINTLN("SENSOR_MAG");
-		    if(overSampling == 0 || sensorsSamples[SENSOR_MAG] == 0)
+		    if (overSampling == 0 || sensorsSamples[SENSOR_MAG] == 0)
 		    {
 			_readMagnetometer(vals);
 			vals[3] = 1;
 		    }
 		    else
 		    {
-			for(byte j = 0; j < 3; j++) {
+			for (byte j = 0; j < 3; j++) {
 			    vals[j] = sensorsSum[SENSOR_MAG_X_BUF + j] / sensorsSamples[SENSOR_MAG];
 			    sensorsSum[SENSOR_MAG_X_BUF + j] = 0;
 			}
@@ -1045,7 +1238,7 @@ void EngduinoProtocolClass::mainLoop()
 
 		case SENSOR_LIGHT:
 		    PRINTLN("SENSOR_LIGHT");
-		    if(overSampling == 0 || sensorsSamples[SENSOR_LIGHT] == 0)
+		    if (overSampling == 0 || sensorsSamples[SENSOR_LIGHT] == 0)
 		    {
 			_readLight(vals);
 			vals[1] = 1;
@@ -1062,14 +1255,14 @@ void EngduinoProtocolClass::mainLoop()
 
 		case SENSOR_ALL:
 		    PRINTLN("SENSOR_ALL");
-		    if(overSampling == 0 || sensorsSamples[SENSOR_ALL] == 0)
+		    if (overSampling == 0 || sensorsSamples[SENSOR_ALL] == 0)
 		    {
 			_readSensors(vals);
 			vals[8] = 1;
 		    }
 		    else
 		    {
-			for(byte j = 0; j < NR_SENSORS_BUF; j++) {
+			for (byte j = 0; j < NR_SENSORS_BUF; j++) {
 			    vals[j] = sensorsSum[j] / sensorsSamples[SENSOR_ALL];
 			    sensorsSum[j] = 0;
 			}
@@ -1084,18 +1277,54 @@ void EngduinoProtocolClass::mainLoop()
     }
 
     // Detect button press or release.
-    if(buttonCatchEnable[BUTTON_PRESSED] && engduinoButton->wasPressed())
+    if (buttonCatchEnable[BUTTON_PRESSED] && engduinoButton->wasPressed())
     {
 	PRINTLN("BUTTON_PRESSED");
 	vals[0] = 1;
 	sendPackage(1, COM_GET_BUTTON, vals);
     }
-    else if(buttonCatchEnable[BUTTON_RELEASED] && engduinoButton->wasReleased())
+    else if (buttonCatchEnable[BUTTON_RELEASED] && engduinoButton->wasReleased())
     {
 	PRINTLN("BUTTON_RELEASED");
 	vals[0] = 2;
 	sendPackage(1, COM_GET_BUTTON, vals);
     }
+
+    // Detect digital pin transition
+    byte readVal;
+    byte j = 0;
+    for (byte i = 0; i < NR_TRAN_PINS; i++) {
+	if (pinTranOption[i] != PIN_TRAN_NONE) {
+	    readVal = digitalRead(i);
+
+	    if (pinTranOption[i] == PIN_TRAN_LOW_TO_HIGH || pinTranOption[i] == PIN_TRAN_BOTH)
+	    {
+		if (pinOldState[i] == 0 && readVal == 1)
+		{
+		    PRINTLN("PIN_TRAN_LOW_TO_HIGH");
+		    vals[(j * 2) + 0] = i;
+		    vals[(j * 2) + 1] = PIN_TRAN_LOW_TO_HIGH;
+		    j++;
+		}
+	    }
+	    else if (pinTranOption[i] == PIN_TRAN_HIGH_TO_LOW || pinTranOption[i] == PIN_TRAN_BOTH)
+	    {
+		if (pinOldState[i] == 1 && readVal == 0)
+		{
+		    PRINTLN("PIN_TRAN_HIGH_TO_LOW");
+		    vals[(j * 2) + 0] = i;
+		    vals[(j * 2) + 1] = PIN_TRAN_HIGH_TO_LOW;
+		    j++;
+		}
+	    }
+	    pinOldState[i] = readVal;
+	}
+    }
+
+    if (j > 0) {
+	sendPackage(j * 2, COM_GET_PINS_DIGITAL_VALUE, vals);
+    }
+   
 }
 
 /*---------------------------------------------------------------------------*/

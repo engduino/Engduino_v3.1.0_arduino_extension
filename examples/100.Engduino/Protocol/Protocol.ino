@@ -118,6 +118,18 @@ int executeCommand(byte communicationChannel, String packageContent, long *packa
     case COM_SET_STATUS:
       res = EngduinoProtocol.setGetStatus(engPackage, packageNrVals, &packageVals[startIndex], 0);
       break;
+    case COM_SET_PINS_DIGITAL_TYPE:
+      res = EngduinoProtocol.setPinsType(engPackage, packageNrVals, &packageVals[startIndex], 0);
+      break;
+    case COM_SET_PINS_ANALOG_TYPE:
+      res = EngduinoProtocol.setPinsType(engPackage, packageNrVals, &packageVals[startIndex], 1);
+      break;
+    case COM_SET_PINS_DIGITAL_VALUE:
+      res = EngduinoProtocol.setPinsValue(engPackage, packageNrVals, &packageVals[startIndex], 0);
+      break;
+    case COM_SET_PINS_ANALOG_VALUE:
+      res = EngduinoProtocol.setPinsValue(engPackage, packageNrVals, &packageVals[startIndex], 1);
+      break;
     case COM_GET_VERSION:
       res = EngduinoProtocol.getVersion(engPackage);
       break;
@@ -144,6 +156,12 @@ int executeCommand(byte communicationChannel, String packageContent, long *packa
       break;
     case COM_GET_IR:
       res = EngduinoProtocol.setGetIR(engPackage, packageNrVals, &packageVals[startIndex], 1);
+      break;
+    case COM_GET_PINS_DIGITAL_VALUE:
+      res = EngduinoProtocol.getPinsValue(engPackage, packageNrVals, &packageVals[startIndex], 0);
+      break;
+    case COM_GET_PINS_ANALOG_VALUE:
+      res = EngduinoProtocol.getPinsValue(engPackage, packageNrVals, &packageVals[startIndex], 1);
       break;
     default: 
       // statements

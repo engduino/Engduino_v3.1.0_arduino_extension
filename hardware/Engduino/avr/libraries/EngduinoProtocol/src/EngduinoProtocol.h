@@ -36,10 +36,10 @@
 #define COM_SET_LEDS		10
 #define COM_SET_LED		11
 
-#define COM_SET_DIGITAL_TYPE	20
-#define COM_SET_ANALOG_TYPE	21
-#define COM_SET_OUTPUT_DIGITAL	22
-#define COM_SET_OUTPUT_ANALOG	23
+#define COM_SET_PINS_DIGITAL_TYPE	20
+#define COM_SET_PINS_ANALOG_TYPE	21
+#define COM_SET_PINS_DIGITAL_VALUE	22
+#define COM_SET_PINS_ANALOG_VALUE	23
 
 #define COM_SET_IR		40
 
@@ -55,8 +55,8 @@
 
 #define COM_GET_BUTTON		120
 
-#define	COM_GET_INPUT_DIGITAL	130
-#define	COM_GET_INPUT_ANALOG	131
+#define	COM_GET_PINS_DIGITAL_VALUE	130
+#define	COM_GET_PINS_ANALOG_VALUE	131
 
 #define	COM_GET_IR		160
 
@@ -89,6 +89,7 @@
 #define RES_ERR_PACKAGE_VAL		    -12
 #define RES_ERR_PACKAGE_UNKNOWN_SENSOR_TYPE -13
 #define RES_ERR_PACKAGE_UNKNOWN_STATUS_KEY  -14
+#define RES_ERR_PACKAGE_UNKNOWN_ANALOG_PIN  -15
 
 
 // General
@@ -129,6 +130,14 @@ enum {
 	BUTTON_RELEASED =	1
 };
 
+enum {
+    PIN_TRAN_NONE =		-1,
+    PIN_TRAN_LOW_TO_HIGH =	1,
+    PIN_TRAN_HIGH_TO_LOW =	2,
+    PIN_TRAN_BOTH =		3
+};
+#define NR_TRAN_PINS	18	// Number of digital transition pins Dxx
+
 
 // Needed to ensure correct linkage between C++ and C linkage of ISR
 extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal));
@@ -156,6 +165,8 @@ class EngduinoProtocolClass
 	bool buttonCatchEnable[2];
 	uint8_t irBuf[IRBUFSZ];
 	long cntt;
+	byte pinTranOption[NR_TRAN_PINS];
+	byte pinOldState[NR_TRAN_PINS];
 
 	long	 sensorsSum[NR_SENSORS_BUF];
 	uint16_t sensorsSamples[NR_SENSORS];
@@ -193,10 +204,12 @@ class EngduinoProtocolClass
 	int setLEDs(struct EngduinoPackage *engPackage, byte nrVals, long *inVals);
 	int setGetStatus(struct EngduinoPackage *engPackage, byte nrVals, long *inVals, uint8_t setGet);
 	int setGetIR(struct EngduinoPackage *engPackage, byte nrVals, long *inVals, uint8_t setGet);
+	int setPinsType(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog);
+	int setPinsValue(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog);
 	int getVersion(struct EngduinoPackage *engPackage);
 	int getSensor(struct EngduinoPackage *engPackage, int sensorType, byte nrVals, long *inVals); 
 	int getButton(struct EngduinoPackage *engPackage, byte nrVals, long *inVals);
-		
+	int getPinsValue(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog);
 
 	/*
 	* The ISR needs access to the private variables, so we declare it
