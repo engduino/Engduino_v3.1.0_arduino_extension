@@ -93,9 +93,9 @@
 
 
 // General
-#define NR_SENSORS	5	  // n+1 (ALL)
-#define TIME_STAMP	2.05  // OS tick in [ms]
-#define MIN_TIME	20    // Minimal time between sending packages in [ms]
+#define NR_SENSORS	5	// n+1 (ALL)
+#define TIME_STAMP	2.05	// OS tick in [ms]
+#define MIN_TIME	20	// Minimal time between sending packages in [ms]
 
 // Structures
 struct EngduinoPackage {
@@ -136,6 +136,11 @@ enum {
     PIN_TRAN_HIGH_TO_LOW =	2,
     PIN_TRAN_BOTH =		3
 };
+
+enum {
+    PIN_TYPE_DIGITAL,
+    PIN_TYPE_ANALOG
+};
 #define NR_TRAN_PINS	18	// Number of digital transition pins Dxx
 
 
@@ -159,14 +164,17 @@ class EngduinoProtocolClass
 	uint8_t	ledsBrightness[16];
 	uint8_t	ledsRGB[3][16];
 	long	vals[16];
-	long sensorsCnt[NR_SENSORS];
-	long sensorsMatch[NR_SENSORS];
+	long	sensorsCnt[NR_SENSORS];
+	long	sensorsMatch[NR_SENSORS];
 	uint8_t sensorsReadOnce[NR_SENSORS];
-	bool buttonCatchEnable[2];
+	bool	buttonCatchEnable[2];
 	uint8_t irBuf[IRBUFSZ];
-	long cntt;
-	byte pinTranOption[NR_TRAN_PINS];
-	byte pinOldState[NR_TRAN_PINS];
+	long	cntt;
+	byte	pinsTranOption[NR_TRAN_PINS];
+	byte	pinsOldState[NR_TRAN_PINS];
+	byte	pinsType[NR_TRAN_PINS];
+	long	pinsCnt[NR_TRAN_PINS];
+	long	pinsMatch[NR_TRAN_PINS];
 
 	long	 sensorsSum[NR_SENSORS_BUF];
 	uint16_t sensorsSamples[NR_SENSORS];

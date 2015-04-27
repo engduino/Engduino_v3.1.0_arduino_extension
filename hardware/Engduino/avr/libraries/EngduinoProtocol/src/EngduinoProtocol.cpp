@@ -187,7 +187,7 @@ void EngduinoProtocolClass::loadDefaults()
     for(byte i = 0; i < NR_SENSORS; i++) {
 	sensorsMatch[i] = -1;
 	sensorsCnt[i] = 0;
-	sensorsReadOnce[0] = 0;
+	sensorsReadOnce[i] = 0;
     }
 
     // Initialize button state.
@@ -199,12 +199,15 @@ void EngduinoProtocolClass::loadDefaults()
 	irBuf[i] = 0;
     }
 
-    //Initialize digital pins transition buffer
+    // Initialize digital pins transition buffer and
+    // pins pulse width counters.
     for (byte i = 0; i < NR_TRAN_PINS; i++) {
-	pinTranOption[i] = PIN_TRAN_NONE;
-	pinOldState[i] = 0;
-    }
-    
+	pinsTranOption[i] = PIN_TRAN_NONE;
+	pinsOldState[i] = 0;
+	pinsType[i] = PIN_TYPE_DIGITAL;
+	pinsMatch[i] = -1;
+	pinsCnt[i] = 0;
+    }  
 
     cntt = 0;
 }
@@ -792,8 +795,12 @@ int EngduinoProtocolClass::setPinsType(struct EngduinoPackage *engPackage, byte 
 *			particular error.
 *
 * This function will set pins value. Parameters needs to be specified in
-* KEY-VALUE pairs. Multiple pairs can be included in the same package. Be
-* carful that pin is already initialized as output!
+* KEY-VALUE-VALUE block. The KEY is a pin number. The first VALUE donates 
+* to a pin value and the second VALUE donates to a pulse width in milliseconds. 
+* Multiple blocks can be included in the same package. In the case of passing 
+* only one block, only KEY-VALUE block is allowed, representing pin number 
+* and pin value without pulse width. Be carful that a pin is already initialized 
+* as an output!
 *
 * Pin value:
 * <table><tr><th>Value</th><th>Type</th></tr>
@@ -801,33 +808,65 @@ int EngduinoProtocolClass::setPinsType(struct EngduinoPackage *engPackage, byte 
 * <tr><td>[1]</td><td>HIGH</td></tr>
 * <tr><td>[0-255]</td><td>PWM duty cycle</td></tr></table>
 *
+* Pulse width:
+* <table><tr><th>Value</th><th>Type</th></tr>
+* <tr><td>[< 1]</td><td>No pulse</td></tr>
+* <tr><td>[> 1]</td><td>Pulse duration in milliseconds</td></tr></table>
+*
+* Input value examples: (Special case - digAnalog = 0)
+* \n [4,1] -> Set D4 on HIGH state.
+*
 * Input value examples: (digAnalog = 0)
-* \n [1,0, 4,0, 12,1, ...] -> Reset D1 and D4 and set D12 on HIGH state.
+* \n [4,0,0, 6,1,2500, 8,0,560, ...] -> Set D4 on HIGH state, set D6 on HIGH 
+* state for 2500 milliseconds and set D8 on LOW state for 560 milliseconds. 
+* After the pulse duration expire the state of the pin will be inverted.
 *
 * Input value examples: (digAnalog = 1)
-* \n [5,96, 13,239, ...] -> Set D5# and D13# as a PWM outputs. Value 
-* represents the duty cycle: between 0 (always off) and 255 (always on). 
+* \n [5,96,0 13,239,1000 ...] -> Set D5# and D13# as PWM outputs. The second
+* value in a block represents the duty cycle: between 0 (always off) and 255 (always on).
+* The third value represents active duration. After duration expire the PWM output will 
+* be set to zero.
 *
 */
 int EngduinoProtocolClass::setPinsValue(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog)
 {
     int nrOf, pinn;
-    // Number of input parameters must be even.
-    if (inNrVals % 2) return RES_ERR_PACKAGE_NR_VALS;
-    nrOf = inNrVals / 2;
-    for (int i = 0; i < nrOf; i++)
+
+    // In the special case only two input parameters are acceptable.
+    // One pin number and pin value without pulse width.
+    if (inNrVals == 2) {
+	pinsMatch[inVals[0]] = -1;
+	pinsCnt[inVals[0]] =	0;
+	inNrVals = 3;	    // Manually set number of input parameters
+	inVals[2] = -1000;  // Any negative number
+    }
+
+    // In all other cases KEY-VALUE-VALUE is requested as one block.
+    // Input array may include multiple blocks.
+    if (inNrVals % 3) return RES_ERR_PACKAGE_NR_VALS;
+    nrOf = inNrVals / 3;
+    for (byte i = 0; i < nrOf; i++)
     {
 	if (digAnalog == 0)
 	{
 	    // Digital
-	    digitalWrite(inVals[(i * 2) + 0], inVals[(i * 2) + 1]);
+	    digitalWrite(inVals[(i * 3) + 0], inVals[(i * 3) + 1]);
+	    pinsType[inVals[(i * 3) + 0]] = PIN_TYPE_DIGITAL;
 	}
 	else
 	{
 	    // Analog
-	    analogWrite(inVals[(i * 2) + 0], inVals[(i * 2) + 1]);
+	    analogWrite(inVals[(i * 3) + 0], inVals[(i * 3) + 1]);
+	    pinsType[inVals[(i * 3) + 0]] = PIN_TYPE_ANALOG;
+	}
+
+	// Set pin's match counter
+	if (inVals[(i * 3) + 2] > 0) {
+	    pinsMatch[inVals[0]] = (long)(inVals[(i * 3) + 2] / TIME_STAMP);;
+	    pinsCnt[inVals[0]] = 0;
 	}
     }
+
     return RES_OK;
 }
 
@@ -883,7 +922,7 @@ int EngduinoProtocolClass::getSensor(struct EngduinoPackage *engPackage, int sen
     }
     else if(inNrVals == 1 && inVals[0] > 0) 
     {
-	// set continuous reading interval.
+	// Set continuous reading interval.
 	if(inVals[0] < MIN_TIME) inVals[0] = MIN_TIME;
 	sensorsMatch[sensorType] = (long)(inVals[0] / TIME_STAMP);
 	sensorsCnt[sensorType] = 0;
@@ -1012,8 +1051,8 @@ int EngduinoProtocolClass::getPinsValue(struct EngduinoPackage *engPackage, byte
 	    // Digital
 	    vals[(i * 2) + 1] = (long)digitalRead(inVals[(i * 2) + 0]);
 	    if ((inVals[(i * 2) + 1] != 0) && (inVals[(i * 2) + 0] < NR_TRAN_PINS)) {
-		pinTranOption[inVals[(i * 2) + 0]] = inVals[(i * 2) + 1];
-		pinOldState[(i * 2) + 0] = (byte)vals[(i * 2) + 1];
+		pinsTranOption[inVals[(i * 2) + 0]] = inVals[(i * 2) + 1];
+		pinsOldState[(i * 2) + 0] = (byte)vals[(i * 2) + 1];
 	    }
 	}
 	else
@@ -1294,12 +1333,12 @@ void EngduinoProtocolClass::mainLoop()
     byte readVal;
     byte j = 0;
     for (byte i = 0; i < NR_TRAN_PINS; i++) {
-	if (pinTranOption[i] != PIN_TRAN_NONE) {
+	if (pinsTranOption[i] != PIN_TRAN_NONE) {
 	    readVal = digitalRead(i);
 
-	    if (pinTranOption[i] == PIN_TRAN_LOW_TO_HIGH || pinTranOption[i] == PIN_TRAN_BOTH)
+	    if (pinsTranOption[i] == PIN_TRAN_LOW_TO_HIGH || pinsTranOption[i] == PIN_TRAN_BOTH)
 	    {
-		if (pinOldState[i] == 0 && readVal == 1)
+		if (pinsOldState[i] == 0 && readVal == 1)
 		{
 		    PRINTLN("PIN_TRAN_LOW_TO_HIGH");
 		    vals[(j * 2) + 0] = i;
@@ -1307,9 +1346,9 @@ void EngduinoProtocolClass::mainLoop()
 		    j++;
 		}
 	    }
-	    else if (pinTranOption[i] == PIN_TRAN_HIGH_TO_LOW || pinTranOption[i] == PIN_TRAN_BOTH)
+	    else if (pinsTranOption[i] == PIN_TRAN_HIGH_TO_LOW || pinsTranOption[i] == PIN_TRAN_BOTH)
 	    {
-		if (pinOldState[i] == 1 && readVal == 0)
+		if (pinsOldState[i] == 1 && readVal == 0)
 		{
 		    PRINTLN("PIN_TRAN_HIGH_TO_LOW");
 		    vals[(j * 2) + 0] = i;
@@ -1317,14 +1356,34 @@ void EngduinoProtocolClass::mainLoop()
 		    j++;
 		}
 	    }
-	    pinOldState[i] = readVal;
+	    pinsOldState[i] = readVal;
 	}
     }
 
     if (j > 0) {
 	sendPackage(j * 2, COM_GET_PINS_DIGITAL_VALUE, vals);
     }
-   
+
+    // Change pins value after the expired pulse width
+    for (byte i = 0; i < NR_TRAN_PINS; i++) {
+	if ((pinsMatch[i] > 0) && (pinsCnt[i] >= pinsMatch[i])) {
+	    pinsCnt[i] =    0;
+	    pinsMatch[i] = -1;
+
+	    if (pinsType[i] == PIN_TYPE_DIGITAL)
+	    {
+		// Toggle pin state
+		digitalWrite(i, !digitalRead(i));
+		PRINTLN("TOGGLE_PIN_DIGITAL");
+	    }
+	    else
+	    {
+		// Set PWN (duty-cycle) on zero
+		analogWrite(i, 0);
+		PRINTLN("TOGGLE_PIN_ANALOG");
+	    } 
+	}
+    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1338,10 +1397,16 @@ void EngduinoProtocolClass::mainLoop()
 */
 ISR(TIMER1_COMPA_vect)
 {
+    // Debugging output
     EngduinoProtocol.cntt++;
     if((EngduinoProtocol.cntt % 500) == 0) PRINTLN(".");
+
     for(byte i = 0; i < NR_SENSORS; i++) {
 	EngduinoProtocol.sensorsCnt[i]++;
+    }
+
+    for (byte i = 0; i < NR_TRAN_PINS; i++) {
+	EngduinoProtocol.pinsCnt[i]++;
     }
 
     if(EngduinoProtocol.overSampling > 0)
