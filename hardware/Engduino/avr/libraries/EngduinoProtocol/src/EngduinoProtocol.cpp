@@ -750,7 +750,8 @@ int EngduinoProtocolClass::setGetStatus(struct EngduinoPackage *engPackage, byte
 */
 int EngduinoProtocolClass::setPinsType(struct EngduinoPackage *engPackage, byte inNrVals, long *inVals, uint8_t digAnalog)
 {
-    int nrOf, pinn;
+    int nrOf;
+    int pinn = -1;
     // Number of input parameters must be even.
     if (inNrVals % 2) return RES_ERR_PACKAGE_NR_VALS;
     nrOf = inNrVals / 2;
@@ -862,8 +863,8 @@ int EngduinoProtocolClass::setPinsValue(struct EngduinoPackage *engPackage, byte
 
 	// Set pin's match counter
 	if (inVals[(i * 3) + 2] > 0) {
-	    pinsMatch[inVals[0]] = (long)(inVals[(i * 3) + 2] / TIME_STAMP);;
-	    pinsCnt[inVals[0]] = 0;
+	    pinsMatch[inVals[(i * 3) + 0]] = (long)(inVals[(i * 3) + 2] / TIME_STAMP);;
+	    pinsCnt[inVals[(i * 3) + 0]] = 0;
 	}
     }
 
