@@ -163,7 +163,7 @@ class EngduinoProtocolClass
 	colour	ledsColor[16];
 	uint8_t	ledsBrightness[16];
 	uint8_t	ledsRGB[3][16];
-	long	vals[16];
+	long	vals[PACKAGE_MAXNR_VALUES];
 	long	sensorsCnt[NR_SENSORS];
 	long	sensorsMatch[NR_SENSORS];
 	uint8_t sensorsReadOnce[NR_SENSORS];
